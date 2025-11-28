@@ -1,0 +1,7 @@
+{
+    "url": "https://citaty.info/random",
+    "quote_selector": "div.field-name-body a > p",
+    "source_selector": "a.copy-to-clipboard",
+    "source_attr": "data-source",
+    "timeout": 10
+}

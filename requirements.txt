@@ -1,0 +1,5 @@
+requests
+beautifulsoup4
+# Optional (uncomment to use headless rendering if needed):
+# playwright
+pytest
