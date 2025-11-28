@@ -1,6 +1,6 @@
 import json
 import sys
-from src.site_parser import get_quote_and_source
+from src.site_parser import QuoteParser
 
 
 def load_config(config_path='config.json'):
@@ -25,7 +25,8 @@ if __name__ == "__main__":
     timeout = config.get('timeout', 10)
 
     try:
-        res = get_quote_and_source(url, quote_selector, source_selector, source_attr, timeout=timeout)
+        parser = QuoteParser(url, quote_selector, source_selector, source_attr, timeout=timeout)
+        res = parser.fetch()
     except Exception as e:
         print(f"Ошибка при получении страницы: {e}")
         sys.exit(1)

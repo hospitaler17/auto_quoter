@@ -25,12 +25,14 @@ def make_response(text):
 def test_get_quote_and_source_with_source():
     with patch('src.site_parser.requests.get') as mock_get:
         mock_get.return_value = make_response(HTML_SNIPPET)
-        res = site_parser.get_quote_and_source(
+        # Тестируем класс
+        parser = site_parser.QuoteParser(
             'https://citaty.info/random',
             'div.field-name-body a > p',
             'a.copy-to-clipboard',
             'data-source'
         )
+        res = parser.fetch()
 
         assert res['quote'] == 'Сочинять, значит быть одиноким до тошноты...'
         assert res['source'] == '📚 Дэвид Митчелл, Дэвид Митчелл. Облачный атлас'
@@ -39,12 +41,13 @@ def test_get_quote_and_source_with_source():
 def test_get_quote_and_source_no_source_selector():
     with patch('src.site_parser.requests.get') as mock_get:
         mock_get.return_value = make_response(HTML_SNIPPET)
-        res = site_parser.get_quote_and_source(
+        parser = site_parser.QuoteParser(
             'https://citaty.info/random',
             'div.field-name-body a > p',
             None,
             'data-source'
         )
+        res = parser.fetch()
 
         assert res['quote'] == 'Сочинять, значит быть одиноким до тошноты...'
         assert res['source'] is None
