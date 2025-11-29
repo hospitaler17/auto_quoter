@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from src import site_parser
+from src.parser import site_parser
 
 
 HTML_SNIPPET = '''
@@ -23,7 +23,7 @@ def make_response(text):
 
 
 def test_get_quote_and_source_with_source():
-    with patch('src.site_parser.requests.get') as mock_get:
+    with patch('src.parser.site_parser.requests.get') as mock_get:
         mock_get.return_value = make_response(HTML_SNIPPET)
         # Тестируем класс
         parser = site_parser.QuoteParser(
@@ -39,7 +39,7 @@ def test_get_quote_and_source_with_source():
 
 
 def test_get_quote_and_source_no_source_selector():
-    with patch('src.site_parser.requests.get') as mock_get:
+    with patch('src.parser.site_parser.requests.get') as mock_get:
         mock_get.return_value = make_response(HTML_SNIPPET)
         parser = site_parser.QuoteParser(
             'https://citaty.info/random',

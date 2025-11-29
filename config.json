@@ -3,5 +3,15 @@
     "quote_selector": "div.field-name-body a > p",
     "source_selector": "a.copy-to-clipboard",
     "source_attr": "data-source",
-    "timeout": 10
+    "timeout": 10,
+    "github": {
+        "token": "your_github_classic_token_here",
+        "emoji": ":speech_balloon:",
+        "graphql_url": "https://api.github.com/graphql",
+        "enabled": true,
+        "max_status_length": 80,
+        "refresh_interval_seconds": 60,
+        "dry_run": false,
+        "debug": true
+    }
 }
