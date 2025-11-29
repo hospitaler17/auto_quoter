@@ -22,34 +22,40 @@ python3 -m venv .venv
 
 ```json
 {
-	"url": "https://citaty.info/random",
-	"quote_selector": "div.field-name-body a > p",
-	"source_selector": "a.copy-to-clipboard",
-	"source_attr": "data-source",
+	"parser": {
+		"url": "https://citaty.info/short",
+		"quote_selector": "div.field-name-body a > p",
+		"source_selector": "a.copy-to-clipboard",
+		"source_attr": "data-source",
+		"block_selector": "article.node-quote"
+	},
 	"timeout": 10,
+	"loop": true,
+	"refresh_interval_seconds": 3600,
+	"debug": false,
 	"github": {
 		"enabled": true,
 		"token": "YOUR_GITHUB_TOKEN",
 		"emoji": ":speech_balloon:",
 		"graphql_url": "https://api.github.com/graphql",
 		"max_status_length": 80,
-		"refresh_interval_seconds": 3600,
-		"dry_run": true,
-		"debug": false
+		"dry_run": true
 	}
 }
 ```
 
+- `parser.*` — настройки CSS‑селекторов. `block_selector` задаёт контейнер для каждой цитаты (например, `article.node-quote` на странице `/short`). Внутри блока выполняются `quote_selector` и `source_selector`, так что можно собирать сразу все цитаты со страницы.
 - `github.enabled` — включает/выключает отправку статуса без изменения других настроек.
 - `github.token` — персональный токен (не публикуйте его). При пустом токене укажите `dry_run: true`, чтобы тестировать без GitHub.
 - `github.emoji` — эмодзи рядом со статусом (опционально).
 - `github.graphql_url` — альтернативная точка GraphQL (обычно не нужна).
-- `github.max_status_length` — максимальная длина строки статуса (по умолчанию 80 символов, как на GitHub).
-- `github.refresh_interval_seconds` — через сколько секунд получать новую цитату и продлевать статус. Если `<= 0`, скрипт выполнится один раз.
+- `loop` — запускает ли скрипт в цикле. Если `false`, выполнится один проход.
+- `refresh_interval_seconds` — общий интервал (в секундах) между циклами; определяет интервалы и время жизни статуса в GitHub. Если `<= 0`, скрипт выполнится один раз.
+- `debug` — глобальный флаг отладки; включает печать подробных логов для GitHub и основной логики.
+- `github.max_status_length` — максимальная длина строки статуса (по умолчанию 80 символов, как на GitHub). Скрипт сначала ищет цитату, которая полностью помещается в лимит, и лишь затем прибегает к обрезанию.
 - `github.dry_run` — при `true` выводит тело GraphQL‑мутации вместо реального запроса.
-- `github.debug` — включает подробные логи с запросами и ответами GitHub.
 
-Статус в GitHub получает срок жизни, равный `refresh_interval_seconds`. Пока скрипт активен, он будет обновлять цитату перед истечением статуса.
+Статус в GitHub получает срок жизни, равный `refresh_interval_seconds`. Пока скрипт активен и `loop` включён, он будет обновлять цитату перед истечением статуса.
 
 ## Использование
 

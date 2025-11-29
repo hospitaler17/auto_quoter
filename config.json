@@ -1,17 +1,21 @@
 {
-    "url": "https://citaty.info/random",
-    "quote_selector": "div.field-name-body a > p",
-    "source_selector": "a.copy-to-clipboard",
-    "source_attr": "data-source",
+    "parser": {
+        "url": "https://citaty.info/short",
+        "quote_selector": "div.field-name-body a > p",
+        "source_selector": "a.copy-to-clipboard",
+        "source_attr": "data-source",
+        "block_selector": "article.node-quote"
+    },
     "timeout": 10,
+    "loop": true,
+    "refresh_interval_seconds": 28800,
+    "debug": false,
     "github": {
-        "token": "your_github_classic_token_here",
+        "enabled": true,
+        "token": "YOUR_GITHUB_TOKEN_HERE",
         "emoji": ":speech_balloon:",
         "graphql_url": "https://api.github.com/graphql",
-        "enabled": true,
         "max_status_length": 80,
-        "refresh_interval_seconds": 60,
-        "dry_run": false,
-        "debug": true
+        "dry_run": false
     }
 }

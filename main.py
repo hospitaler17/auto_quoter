@@ -1,7 +1,7 @@
 import json
 import sys
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.github.status_client import GitHubStatusClient, GitHubStatusError
 from src.parser.site_parser import QuoteParser
@@ -23,45 +23,45 @@ def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
 
 
 def build_parser(config: Dict[str, Any]) -> QuoteParser:
+    parser_cfg = config.get('parser') or {}
     return QuoteParser(
-        config.get('url'),
-        config.get('quote_selector'),
-        config.get('source_selector'),
-        config.get('source_attr', 'data-source'),
+        parser_cfg.get('url'),
+        parser_cfg.get('quote_selector'),
+        parser_cfg.get('source_selector'),
+        parser_cfg.get('source_attr', 'data-source'),
+        parser_cfg.get('block_selector'),
         timeout=config.get('timeout', 10),
     )
 
 
 def build_github_client(
-    config: Optional[Dict[str, Any]]
-) -> Tuple[Optional[GitHubStatusClient], int, bool]:
+    config: Optional[Dict[str, Any]], debug: bool = False
+) -> Tuple[Optional[GitHubStatusClient], bool]:
     if not config:
-        return None, 0, False
+        return None, False
 
     enabled = config.get('enabled', True)
-    refresh_interval = int(config.get('refresh_interval_seconds') or 0)
-
     if not enabled:
-        return None, refresh_interval, False
+        return None, False
 
     token = config.get('token')
     dry_run = config.get('dry_run', False)
     if not token and not dry_run:
         print("GitHub token не указан, статус обновляться не будет.")
-        return None, refresh_interval, True
+        return None, True
 
     client_kwargs = {
         'token': token,
         'default_emoji': config.get('emoji'),
         'timeout': config.get('timeout', 10),
         'dry_run': dry_run,
-        'debug': config.get('debug', False),
+        'debug': bool(debug),
     }
     if config.get('graphql_url'):
         client_kwargs['api_url'] = config['graphql_url']
 
     client = GitHubStatusClient(**client_kwargs)
-    return client, refresh_interval, True
+    return client, True
 
 
 def format_status_message(quote: Optional[str], source: Optional[str]) -> Optional[str]:
@@ -87,6 +87,30 @@ def enforce_status_length(message: str, limit: int) -> Tuple[str, bool]:
     return f"{clipped}{TRUNCATION_SUFFIX}", True
 
 
+def select_quote_for_length(
+    candidates: List[Dict[str, Optional[str]]],
+    max_status_length: int,
+) -> Tuple[Optional[Dict[str, Optional[str]]], Optional[str]]:
+    """Возвращает первую цитату, которая помещается в лимит, либо первую доступную."""
+
+    fallback_entry: Optional[Dict[str, Optional[str]]] = None
+    fallback_message: Optional[str] = None
+
+    for entry in candidates:
+        message = format_status_message(entry.get('quote'), entry.get('source'))
+        if not message:
+            continue
+
+        if fallback_entry is None:
+            fallback_entry = entry
+            fallback_message = message
+
+        if len(message) <= max_status_length:
+            return entry, message
+
+    return fallback_entry, fallback_message
+
+
 def update_once(
     parser: QuoteParser,
     github_client: Optional[GitHubStatusClient],
@@ -95,13 +119,22 @@ def update_once(
     github_enabled: bool,
 ) -> bool:
     try:
-        result = parser.fetch()
+        results = parser.fetch_all()
     except Exception as exc:  # pragma: no cover - network errors
         print(f"Ошибка при получении страницы: {exc}")
         return False
 
-    quote = result.get('quote')
-    source = result.get('source')
+    if not results:
+        print("Не удалось найти ни одной цитаты на странице.")
+        return False
+
+    selected_entry, status_message = select_quote_for_length(results, max_status_length)
+    if not status_message:
+        print("Нет строки для обновления статуса GitHub.")
+        return True
+
+    quote = selected_entry.get('quote') if selected_entry else None
+    source = selected_entry.get('source') if selected_entry else None
 
     if quote:
         print(f"QUOTE: {quote}")
@@ -112,11 +145,6 @@ def update_once(
         print(f"SOURCE: {source}")
     else:
         print("SOURCE: не найдено")
-
-    status_message = format_status_message(quote, source)
-    if not status_message:
-        print("Нет строки для обновления статуса GitHub.")
-        return True
 
     if not github_enabled:
         return True
@@ -160,12 +188,23 @@ def main() -> None:
     config = load_config()
     parser = build_parser(config)
     github_config = config.get('github') or {}
-    github_client, refresh_interval, github_enabled = build_github_client(github_config)
+    # top-level loop and interval
+    loop_enabled = bool(config.get('loop', True))
+    refresh_interval = int(config.get('refresh_interval_seconds') or 0)
+    global_debug = bool(config.get('debug', False))
+
+    github_client, github_enabled = build_github_client(github_config, debug=global_debug)
     max_status_length = int(
         github_config.get('max_status_length') or DEFAULT_MAX_STATUS_LENGTH
     )
 
-    if not github_client and github_enabled:
+    # if loop globally disabled, force single-run
+    if not loop_enabled:
+        refresh_interval = 0
+
+    # if github is enabled but we couldn't construct a client (e.g. missing token),
+    # fall back to single-run to avoid repeated failing attempts
+    if github_enabled and not github_client:
         refresh_interval = 0
 
     try:
