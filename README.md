@@ -23,11 +23,13 @@ python3 -m venv .venv
 ```json
 {
 	"parser": {
-		"url": "https://citaty.info/short",
+		"url": "https://citaty.info/random",
 		"quote_selector": "div.field-name-body a > p",
 		"source_selector": "a.copy-to-clipboard",
 		"source_attr": "data-source",
-		"block_selector": "article.node-quote"
+		"block_selector": "article.node-quote",
+		"max_attempts": 0,
+		"retry_interval_seconds": 1.0
 	},
 	"timeout": 10,
 	"loop": true,
@@ -44,7 +46,9 @@ python3 -m venv .venv
 }
 ```
 
-- `parser.*` — настройки CSS‑селекторов. `block_selector` задаёт контейнер для каждой цитаты (например, `article.node-quote` на странице `/short`). Внутри блока выполняются `quote_selector` и `source_selector`, так что можно собирать сразу все цитаты со страницы.
+- `parser.*` — настройки CSS‑селекторов и поведения получения цитат. `block_selector` задаёт контейнер для каждой цитаты (например, `article.node-quote` на страницах `/random` и `/short`); внутри блока выполняются `quote_selector` и `source_selector`.
+- `parser.max_attempts` — сколько раз запрашивать страницу, пока не найдём цитату, полностью помещающуюся в лимит статуса. `0` означает бесконечные попытки (по одной в секунду) до тех пор, пока условие не выполнится.
+- `parser.retry_interval_seconds` — пауза между повторными запросами.
 - `github.enabled` — включает/выключает отправку статуса без изменения других настроек.
 - `github.token` — персональный токен (не публикуйте его). При пустом токене укажите `dry_run: true`, чтобы тестировать без GitHub.
 - `github.emoji` — эмодзи рядом со статусом (опционально).

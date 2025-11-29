@@ -1,13 +1,15 @@
 {
     "parser": {
-        "url": "https://citaty.info/short",
+        "url": "https://citaty.info/random",
         "quote_selector": "div.field-name-body a > p",
         "source_selector": "a.copy-to-clipboard",
         "source_attr": "data-source",
-        "block_selector": "article.node-quote"
+        "block_selector": "article.node-quote",
+        "max_attempts": 0,
+        "retry_interval_seconds": 1.0
     },
     "timeout": 10,
-    "loop": true,
+    "loop": false,
     "refresh_interval_seconds": 28800,
     "debug": false,
     "github": {

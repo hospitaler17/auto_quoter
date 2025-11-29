@@ -8,6 +8,8 @@ from src.parser.site_parser import QuoteParser
 
 DEFAULT_MAX_STATUS_LENGTH = 80
 TRUNCATION_SUFFIX = "..."
+DEFAULT_PARSER_MAX_ATTEMPTS = 0  # 0 = бесконечные попытки
+DEFAULT_PARSER_RETRY_INTERVAL = 1.0
 
 
 def load_config(config_path: str = 'config.json') -> Dict[str, Any]:
@@ -111,30 +113,74 @@ def select_quote_for_length(
     return fallback_entry, fallback_message
 
 
+def fetch_quote_with_retries(
+    parser: QuoteParser,
+    max_status_length: int,
+    max_attempts: int,
+    retry_interval: float,
+) -> Tuple[Optional[Dict[str, Optional[str]]], Optional[str], int, bool]:
+    """Повторяет запрос страницы, пока не найдёт цитату в пределах лимита."""
+
+    attempts = 0
+    fallback_entry: Optional[Dict[str, Optional[str]]] = None
+    fallback_message: Optional[str] = None
+    unlimited = max_attempts <= 0
+
+    while True:
+        attempts += 1
+        results = parser.fetch_all()
+        if results:
+            entry, message = select_quote_for_length(results, max_status_length)
+            if message:
+                if fallback_entry is None:
+                    fallback_entry = entry
+                    fallback_message = message
+                if len(message) <= max_status_length:
+                    return entry, message, attempts, True
+
+        if not unlimited and attempts >= max_attempts:
+            break
+
+        if retry_interval > 0:
+            time.sleep(retry_interval)
+
+    return fallback_entry, fallback_message, attempts, False
+
+
 def update_once(
     parser: QuoteParser,
     github_client: Optional[GitHubStatusClient],
     refresh_interval: int,
     max_status_length: int,
     github_enabled: bool,
+    parser_max_attempts: int,
+    parser_retry_interval: float,
 ) -> bool:
     try:
-        results = parser.fetch_all()
+        selected_entry, status_message, attempts, within_limit = fetch_quote_with_retries(
+            parser,
+            max_status_length,
+            parser_max_attempts,
+            parser_retry_interval,
+        )
     except Exception as exc:  # pragma: no cover - network errors
         print(f"Ошибка при получении страницы: {exc}")
         return False
 
-    if not results:
-        print("Не удалось найти ни одной цитаты на странице.")
-        return False
-
-    selected_entry, status_message = select_quote_for_length(results, max_status_length)
     if not status_message:
         print("Нет строки для обновления статуса GitHub.")
         return True
 
     quote = selected_entry.get('quote') if selected_entry else None
     source = selected_entry.get('source') if selected_entry else None
+
+    if attempts > 1 and within_limit:
+        print(f"Цитата найдена за {attempts} попыток.")
+    elif not within_limit:
+        print(
+            "Подходящую по длине цитату найти не удалось. Используем первый результат"
+            " и при необходимости обрежем."
+        )
 
     if quote:
         print(f"QUOTE: {quote}")
@@ -186,12 +232,25 @@ def update_once(
 
 def main() -> None:
     config = load_config()
+    parser_cfg = config.get('parser') or {}
     parser = build_parser(config)
     github_config = config.get('github') or {}
     # top-level loop and interval
     loop_enabled = bool(config.get('loop', True))
     refresh_interval = int(config.get('refresh_interval_seconds') or 0)
     global_debug = bool(config.get('debug', False))
+
+    parser_max_attempts = int(
+        parser_cfg.get('max_attempts', DEFAULT_PARSER_MAX_ATTEMPTS) or DEFAULT_PARSER_MAX_ATTEMPTS
+    )
+    if parser_max_attempts < 0:
+        parser_max_attempts = 0
+
+    parser_retry_interval = float(
+        parser_cfg.get('retry_interval_seconds', DEFAULT_PARSER_RETRY_INTERVAL)
+    )
+    if parser_retry_interval < 0:
+        parser_retry_interval = 0.0
 
     github_client, github_enabled = build_github_client(github_config, debug=global_debug)
     max_status_length = int(
@@ -215,6 +274,8 @@ def main() -> None:
                 refresh_interval,
                 max_status_length,
                 github_enabled,
+                parser_max_attempts,
+                parser_retry_interval,
             )
             if not success:
                 break
