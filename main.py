@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -46,7 +47,7 @@ def build_github_client(
     if not enabled:
         return None, False
 
-    token = config.get('token')
+    token = os.getenv('AUTO_QUOTER_GITHUB_TOKEN') or config.get('token')
     dry_run = config.get('dry_run', False)
     if not token and not dry_run:
         print("GitHub token не указан, статус обновляться не будет.")

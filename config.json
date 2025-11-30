@@ -14,7 +14,7 @@
     "debug": false,
     "github": {
         "enabled": true,
-        "token": "YOUR_GITHUB_TOKEN_HERE",
+        "token": "",
         "emoji": ":speech_balloon:",
         "graphql_url": "https://api.github.com/graphql",
         "max_status_length": 80,
