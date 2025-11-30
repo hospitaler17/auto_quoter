@@ -4,6 +4,16 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
+from src.core.config import load_config
+from src.core.builders import build_parser, build_github_client
+from src.core.selection import (
+    format_status_message,
+    enforce_status_length,
+    select_quote_for_length,
+    fetch_quote_with_retries,
+)
+from src.core.runner import update_once, main as run_main
+
 from src.github.status_client import GitHubStatusClient, GitHubStatusError
 from src.parser.site_parser import QuoteParser
 
@@ -232,62 +242,8 @@ def update_once(
 
 
 def main() -> None:
-    config = load_config()
-    parser_cfg = config.get('parser') or {}
-    parser = build_parser(config)
-    github_config = config.get('github') or {}
-    # top-level loop and interval
-    loop_enabled = bool(config.get('loop', True))
-    refresh_interval = int(config.get('refresh_interval_seconds') or 0)
-    global_debug = bool(config.get('debug', False))
-
-    parser_max_attempts = int(
-        parser_cfg.get('max_attempts', DEFAULT_PARSER_MAX_ATTEMPTS) or DEFAULT_PARSER_MAX_ATTEMPTS
-    )
-    if parser_max_attempts < 0:
-        parser_max_attempts = 0
-
-    parser_retry_interval = float(
-        parser_cfg.get('retry_interval_seconds', DEFAULT_PARSER_RETRY_INTERVAL)
-    )
-    if parser_retry_interval < 0:
-        parser_retry_interval = 0.0
-
-    github_client, github_enabled = build_github_client(github_config, debug=global_debug)
-    max_status_length = int(
-        github_config.get('max_status_length') or DEFAULT_MAX_STATUS_LENGTH
-    )
-
-    # if loop globally disabled, force single-run
-    if not loop_enabled:
-        refresh_interval = 0
-
-    # if github is enabled but we couldn't construct a client (e.g. missing token),
-    # fall back to single-run to avoid repeated failing attempts
-    if github_enabled and not github_client:
-        refresh_interval = 0
-
-    try:
-        while True:
-            success = update_once(
-                parser,
-                github_client,
-                refresh_interval,
-                max_status_length,
-                github_enabled,
-                parser_max_attempts,
-                parser_retry_interval,
-            )
-            if not success:
-                break
-
-            if not refresh_interval or refresh_interval <= 0:
-                break
-
-            print(f"Повторное обновление статуса через {refresh_interval} секунд...")
-            time.sleep(refresh_interval)
-    except KeyboardInterrupt:
-        print("Остановка по Ctrl+C.")
+    # Delegate to runner.main which contains the main loop.
+    run_main()
 
 
 if __name__ == "__main__":
