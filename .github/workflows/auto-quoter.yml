@@ -22,7 +22,7 @@ env:
 
 jobs:
   run-auto-quoter:
-    if: ${{ github.event_name == 'workflow_dispatch' || env.AUTO_QUOTER_SCHEDULE_ENABLED == 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.AUTO_QUOTER_SCHEDULE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: auto-quoter
     env:
