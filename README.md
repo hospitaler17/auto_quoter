@@ -85,6 +85,17 @@ jobs:
 
 После создания секрета запустите workflow вручную (Actions → Auto Quoter Runner → Run workflow) или дождитесь cron‑запуска.
 
+### Управление расписанием
+
+Периодические запуски контролируются переменной `AUTO_QUOTER_SCHEDULE_ENABLED`. По умолчанию переменная не задана — cron не запускается. Чтобы включить расписание, создайте **Actions Variable** либо **Environment Variable** (в пределах того же `auto-quoter` environment) со значением `true`:
+
+1. Перейдите в `Settings` → `Secrets and variables` → `Actions` → `Variables` (или в `Environments` → `auto-quoter` → `Variables`).
+2. Нажмите `New repository variable` (или `Add variable` в environment).
+3. Установите `Name = AUTO_QUOTER_SCHEDULE_ENABLED`, `Value = true`.
+4. Сохраните.
+
+После этого cron-запуски станут активны; ручной `workflow_dispatch` всегда доступен, поскольку условие проверяет переменную только для scheduled событий.
+
 
 Статус в GitHub получает срок жизни, равный `refresh_interval_seconds`. Пока скрипт активен и `loop` включён, он будет обновлять цитату перед истечением статуса.
 

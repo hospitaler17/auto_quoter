@@ -2,10 +2,10 @@ name: Auto Quoter Runner
 
 on:
   workflow_dispatch:
-  # Run every 8 hours at 00:00, 08:00, 16:00 Moscow time (UTC+3)
-  # Converted to UTC => 21:00, 05:00, 13:00
+  # Run daily at 08:00 Moscow time (UTC+3)
+  # Converted to UTC => 05:00
   schedule:
-    - cron: '0 5,13,21 * * *'
+    - cron: '0 5 * * *'
 
 concurrency:
   group: auto-quoter
@@ -15,15 +15,22 @@ permissions:
   contents: read
   actions: read
 
+env:
+  # Boolean repository variable (or environment variable) that gates scheduled runs.
+  # Cron runs occur only when the value is 'true'; manual workflow_dispatch ignores this flag.
+  AUTO_QUOTER_SCHEDULE_ENABLED: ${{ vars.AUTO_QUOTER_SCHEDULE_ENABLED }}
+
 jobs:
   run-auto-quoter:
+    if: ${{ github.event_name == 'workflow_dispatch' || env.AUTO_QUOTER_SCHEDULE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: auto-quoter
     env:
-      TARGET_BRANCH: work
+      TARGET_BRANCH: main
       AUTO_QUOTER_GITHUB_TOKEN: ${{ secrets.AUTO_QUOTER_GITHUB_TOKEN }}
+      AUTO_QUOTER_SCHEDULE_ENABLED: ${{ env.AUTO_QUOTER_SCHEDULE_ENABLED }}
     steps:
-      - name: Checkout work branch
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
           ref: ${{ env.TARGET_BRANCH }}

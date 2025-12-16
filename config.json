@@ -10,7 +10,7 @@
     },
     "timeout": 10,
     "loop": false,
-    "refresh_interval_seconds": 28800,
+    "refresh_interval_seconds": 86400,
     "debug": false,
     "github": {
         "enabled": true,
