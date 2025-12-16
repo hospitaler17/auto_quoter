@@ -28,7 +28,6 @@ jobs:
     env:
       TARGET_BRANCH: main
       AUTO_QUOTER_GITHUB_TOKEN: ${{ secrets.AUTO_QUOTER_GITHUB_TOKEN }}
-      AUTO_QUOTER_SCHEDULE_ENABLED: ${{ env.AUTO_QUOTER_SCHEDULE_ENABLED }}
     steps:
       - name: Checkout main branch
         uses: actions/checkout@v4
@@ -38,8 +37,8 @@ jobs:
 
       - name: Write .env
         run: |
-          cat <<'EOF' > .env
-          AUTO_QUOTER_GITHUB_TOKEN=${AUTO_QUOTER_GITHUB_TOKEN}
+          cat <<EOF > .env
+          AUTO_QUOTER_GITHUB_TOKEN=$AUTO_QUOTER_GITHUB_TOKEN
           EOF
 
       - name: Set up Python
